@@ -1,0 +1,22 @@
+{
+  "name": "the-governor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A systemic city and society management simulator.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=@the-governor/frontend",
+    "dev:backend": "npm run start:dev --workspace=@the-governor/backend",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
