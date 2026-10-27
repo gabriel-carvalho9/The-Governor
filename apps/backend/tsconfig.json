@@ -1,4 +1,4 @@
-﻿{
+{
     "extends":  "../../tsconfig.base.json",
     "compilerOptions":  {
                             "module":  "commonjs",
@@ -21,7 +21,8 @@
                             "noFallthroughCasesInSwitch":  true,
                             "ignoreDeprecations":  "6.0",
                             "types":  [
-                                          "node"
+                                          "node",
+                                          "jest"
                                       ]
                         },
     "include":  [
@@ -30,6 +31,7 @@
     "exclude":  [
                     "node_modules",
                     "dist",
-                    "test"
+                    "test",
+                    "**/*.spec.ts"
                 ]
 }
