@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { advanceMonth, createInitialState } from "./engine";
 import type { Budget } from "@the-governor/shared";
 
@@ -114,5 +115,75 @@ describe("Simulation engine", () => {
 
     expect(result.state.indicators.approval).toBe(0);
     expect(result.report.indicatorChanges.approval).toBe(-1);
+  });
+
+  it("reduces health and education when public services spending is too low", () => {
+    const state = createInitialState();
+    state.budget.expenseBreakdown.publicServices = 200_000;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.health).toBe(73);
+    expect(result.state.indicators.education).toBe(67);
+  });
+
+  it("improves health and education when public services spending is high", () => {
+    const state = createInitialState();
+    state.budget.expenseBreakdown.publicServices = 320_000;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.health).toBe(75);
+    expect(result.state.indicators.education).toBe(69);
+    expect(result.report.indicatorChanges.health).toBe(1);
+    expect(result.report.indicatorChanges.education).toBe(1);
+  });
+
+  it("reduces the environment indicator when maintenance spending is too low", () => {
+    const state = createInitialState();
+    state.budget.expenseBreakdown.maintenance = 70_000;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.environment).toBe(81);
+    expect(result.report.indicatorChanges.environment).toBe(-1);
+  });
+
+  it("improves the environment indicator when maintenance spending is high", () => {
+    const state = createInitialState();
+    state.budget.expenseBreakdown.maintenance = 110_000;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.environment).toBe(83);
+    expect(result.report.indicatorChanges.environment).toBe(1);
+  });
+  
+  it("never increases health or education above 100", () => {
+    const state = createInitialState();
+    state.budget.expenseBreakdown.publicServices = 320_000;
+    state.indicators.health = 100;
+    state.indicators.education = 100;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.health).toBe(100);
+    expect(result.state.indicators.education).toBe(100);
+    expect(result.report.indicatorChanges.health).toBeUndefined();
+    expect(result.report.indicatorChanges.education).toBeUndefined();
+  });
+
+  it("never decreases health or education below zero", () => {
+    const state = createInitialState();
+    state.budget.expenseBreakdown.publicServices = 200_000;
+    state.indicators.health = 0;
+    state.indicators.education = 0;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.health).toBe(0);
+    expect(result.state.indicators.education).toBe(0);
+    expect(result.report.indicatorChanges.health).toBeUndefined();
+    expect(result.report.indicatorChanges.education).toBeUndefined();
   });
 });

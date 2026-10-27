@@ -1,5 +1,10 @@
 
-import type { Budget, SimulationState, TurnResult } from "@the-governor/shared";
+import type {
+  Budget,
+  IndicatorName,
+  SimulationState,
+  TurnResult,
+} from "@the-governor/shared";
 
 function cloneBudget(budget: Budget): Budget {
   return {
@@ -56,6 +61,32 @@ function clampIndicator(value: number): number {
   return Math.max(0, Math.min(100, value));
 }
 
+function calculateSpendingEffects(
+  budget: Budget,
+): Partial<Record<IndicatorName, number>> {
+  const changes: Partial<Record<IndicatorName, number>> = {};
+
+  const publicServices = budget.expenseBreakdown.publicServices;
+
+  if (publicServices < 208_000) {
+    changes.health = -1;
+    changes.education = -1;
+  } else if (publicServices > 312_000) {
+    changes.health = 1;
+    changes.education = 1;
+  }
+
+  const maintenance = budget.expenseBreakdown.maintenance;
+
+  if (maintenance < 72_000) {
+    changes.environment = -1;
+  } else if (maintenance > 108_000) {
+    changes.environment = 1;
+  }
+
+  return changes;
+}
+
 export function createInitialState(): SimulationState {
   const budget = calculateBudget({
     cash: 2_500_000,
@@ -101,10 +132,41 @@ export function advanceMonth(state: SimulationState): TurnResult {
 
   budgetAfter.cash += budgetAfter.monthlyBalance;
 
+  const indicatorChanges = calculateSpendingEffects(budgetAfter);
+
   const approvalBefore = state.indicators.approval;
   const approvalPenalty = budgetAfter.cash < 0 ? 2 : 0;
   const approvalAfter = clampIndicator(approvalBefore - approvalPenalty);
   const approvalChange = approvalAfter - approvalBefore;
+
+  if (approvalChange !== 0) {
+    indicatorChanges.approval = approvalChange;
+  }
+
+  const nextIndicators = {
+    health: clampIndicator(
+      state.indicators.health + (indicatorChanges.health ?? 0),
+    ),
+    education: clampIndicator(
+      state.indicators.education + (indicatorChanges.education ?? 0),
+    ),
+    housing: state.indicators.housing,
+    environment: clampIndicator(
+      state.indicators.environment + (indicatorChanges.environment ?? 0),
+    ),
+    approval: approvalAfter,
+    employment: state.indicators.employment,
+  };
+
+  for (const key of ["health", "education", "environment"] as const) {
+    const actualChange = nextIndicators[key] - state.indicators[key];
+
+    if (actualChange === 0) {
+      delete indicatorChanges[key];
+    } else {
+      indicatorChanges[key] = actualChange;
+    }
+  }
 
   const nextMonth = state.month === 12 ? 1 : state.month + 1;
   const nextYear = state.month === 12 ? state.year + 1 : state.year;
@@ -115,10 +177,7 @@ export function advanceMonth(state: SimulationState): TurnResult {
     year: nextYear,
     actionPoints: 2,
     budget: budgetAfter,
-    indicators: {
-      ...state.indicators,
-      approval: approvalAfter,
-    },
+    indicators: nextIndicators,
   };
 
   const summary = [
@@ -128,10 +187,16 @@ export function advanceMonth(state: SimulationState): TurnResult {
     `Caixa municipal: G$ ${budgetAfter.cash.toLocaleString("pt-BR")}.`,
   ];
 
-  if (approvalPenalty > 0) {
-    summary.push(
-      `Crise financeira: a aprovação caiu ${approvalPenalty} pontos por causa do caixa negativo.`,
-    );
+  if (budgetAfter.cash < 0) {
+    if (approvalChange < 0) {
+      summary.push(
+        `Crise financeira: a aprovação caiu ${Math.abs(approvalChange)} pontos por causa do caixa negativo.`,
+      );
+    } else {
+      summary.push(
+        "Crise financeira: o caixa municipal fechou negativo.",
+      );
+    }
   }
 
   return {
@@ -142,7 +207,7 @@ export function advanceMonth(state: SimulationState): TurnResult {
       summary,
       budgetBefore,
       budgetAfter: cloneBudget(budgetAfter),
-      indicatorChanges: approvalChange === 0 ? {} : { approval: approvalChange },
+      indicatorChanges,
     },
   };
 }
