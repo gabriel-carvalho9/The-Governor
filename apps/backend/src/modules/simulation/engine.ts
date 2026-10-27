@@ -1,3 +1,4 @@
+
 import type { Budget, SimulationState, TurnResult } from "@the-governor/shared";
 
 function cloneBudget(budget: Budget): Budget {
@@ -51,6 +52,10 @@ function calculateBudget(budget: Budget): Budget {
   };
 }
 
+function clampIndicator(value: number): number {
+  return Math.max(0, Math.min(100, value));
+}
+
 export function createInitialState(): SimulationState {
   const budget = calculateBudget({
     cash: 2_500_000,
@@ -96,6 +101,11 @@ export function advanceMonth(state: SimulationState): TurnResult {
 
   budgetAfter.cash += budgetAfter.monthlyBalance;
 
+  const approvalBefore = state.indicators.approval;
+  const approvalPenalty = budgetAfter.cash < 0 ? 2 : 0;
+  const approvalAfter = clampIndicator(approvalBefore - approvalPenalty);
+  const approvalChange = approvalAfter - approvalBefore;
+
   const nextMonth = state.month === 12 ? 1 : state.month + 1;
   const nextYear = state.month === 12 ? state.year + 1 : state.year;
 
@@ -105,23 +115,34 @@ export function advanceMonth(state: SimulationState): TurnResult {
     year: nextYear,
     actionPoints: 2,
     budget: budgetAfter,
-    indicators: { ...state.indicators },
+    indicators: {
+      ...state.indicators,
+      approval: approvalAfter,
+    },
   };
+
+  const summary = [
+    `Receita mensal: G$ ${budgetAfter.monthlyRevenue.toLocaleString("pt-BR")}.`,
+    `Despesas mensais: G$ ${budgetAfter.monthlyExpenses.toLocaleString("pt-BR")}.`,
+    `Resultado do mês: G$ ${budgetAfter.monthlyBalance.toLocaleString("pt-BR")}.`,
+    `Caixa municipal: G$ ${budgetAfter.cash.toLocaleString("pt-BR")}.`,
+  ];
+
+  if (approvalPenalty > 0) {
+    summary.push(
+      `Crise financeira: a aprovação caiu ${approvalPenalty} pontos por causa do caixa negativo.`,
+    );
+  }
 
   return {
     state: nextState,
     report: {
       month: state.month,
       year: state.year,
-      summary: [
-        `Receita mensal: G$ ${budgetAfter.monthlyRevenue.toLocaleString("pt-BR")}.`,
-        `Despesas mensais: G$ ${budgetAfter.monthlyExpenses.toLocaleString("pt-BR")}.`,
-        `Resultado do mês: G$ ${budgetAfter.monthlyBalance.toLocaleString("pt-BR")}.`,
-        `Caixa municipal: G$ ${budgetAfter.cash.toLocaleString("pt-BR")}.`,
-      ],
+      summary,
       budgetBefore,
-      budgetAfter: { ...budgetAfter },
-      indicatorChanges: {},
+      budgetAfter: cloneBudget(budgetAfter),
+      indicatorChanges: approvalChange === 0 ? {} : { approval: approvalChange },
     },
   };
 }

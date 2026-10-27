@@ -79,4 +79,40 @@ describe("Simulation engine", () => {
       "Orçamento inválido: folha de pagamento deve ser um número finito não negativo.",
     );
   });
+
+  
+  it("reduces approval by two points when the monthly closing cash is negative", () => {
+    const state = createInitialState();
+    state.budget.cash = 0;
+    state.budget.expenseBreakdown.publicServices = 700_000;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.budget.cash).toBe(-360_000);
+    expect(result.state.indicators.approval).toBe(60);
+    expect(result.report.indicatorChanges.approval).toBe(-2);
+    expect(result.report.summary).toContain(
+      "Crise financeira: a aprovação caiu 2 pontos por causa do caixa negativo.",
+    );
+  });
+
+  it("does not reduce approval when monthly closing cash is zero or positive", () => {
+    const state = createInitialState();
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.approval).toBe(62);
+    expect(result.report.indicatorChanges.approval).toBeUndefined();
+  });
+
+  it("never reduces approval below zero", () => {
+    const state = createInitialState();
+    state.budget.cash = 0;
+    state.budget.expenseBreakdown.publicServices = 700_000;
+    state.indicators.approval = 1;
+
+    const result = advanceMonth(state);
+
+    expect(result.state.indicators.approval).toBe(0);
+    expect(result.report.indicatorChanges.approval).toBe(-1);
+  });
 });
