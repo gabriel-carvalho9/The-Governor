@@ -1,6 +1,37 @@
 import type { Budget, SimulationState, TurnResult } from "@the-governor/shared";
 
+function cloneBudget(budget: Budget): Budget {
+  return {
+    ...budget,
+    revenueBreakdown: { ...budget.revenueBreakdown },
+    expenseBreakdown: { ...budget.expenseBreakdown },
+  };
+}
+
+function validateBudget(budget: Budget): void {
+  const values: [string, number][] = [
+    ["caixa municipal", budget.cash],
+    ["impostos", budget.revenueBreakdown.taxes],
+    ["taxas e serviços", budget.revenueBreakdown.feesAndServices],
+    ["transferências", budget.revenueBreakdown.transfers],
+    ["serviços públicos", budget.expenseBreakdown.publicServices],
+    ["folha de pagamento", budget.expenseBreakdown.payroll],
+    ["manutenção", budget.expenseBreakdown.maintenance],
+    ["serviço da dívida", budget.expenseBreakdown.debtService],
+  ];
+
+  for (const [name, value] of values) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(
+        `Orçamento inválido: ${name} deve ser um número finito não negativo.`,
+      );
+    }
+  }
+}
+
 function calculateBudget(budget: Budget): Budget {
+  validateBudget(budget);
+
   const monthlyRevenue =
     budget.revenueBreakdown.taxes +
     budget.revenueBreakdown.feesAndServices +
@@ -13,7 +44,7 @@ function calculateBudget(budget: Budget): Budget {
     budget.expenseBreakdown.debtService;
 
   return {
-    ...budget,
+    ...cloneBudget(budget),
     monthlyRevenue,
     monthlyExpenses,
     monthlyBalance: monthlyRevenue - monthlyExpenses,
@@ -60,7 +91,7 @@ export function createInitialState(): SimulationState {
 }
 
 export function advanceMonth(state: SimulationState): TurnResult {
-  const budgetBefore = { ...state.budget };
+  const budgetBefore = cloneBudget(state.budget);
   const budgetAfter = calculateBudget(state.budget);
 
   budgetAfter.cash += budgetAfter.monthlyBalance;

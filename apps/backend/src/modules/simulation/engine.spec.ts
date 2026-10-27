@@ -1,4 +1,5 @@
 import { advanceMonth, createInitialState } from "./engine";
+import type { Budget } from "@the-governor/shared";
 
 describe("Simulation engine", () => {
   it("creates Vale Sereno with the initial budget", () => {
@@ -48,5 +49,34 @@ describe("Simulation engine", () => {
     const result = advanceMonth(state);
 
     expect(result.state.actionPoints).toBe(2);
+  });
+
+  it("does not mutate the original budget or nested breakdowns", () => {
+    const state = createInitialState();
+    const originalTaxes = state.budget.revenueBreakdown.taxes;
+
+    const result = advanceMonth(state);
+
+    result.state.budget.revenueBreakdown.taxes = 0;
+
+    expect(state.budget.revenueBreakdown.taxes).toBe(originalTaxes);
+  });
+
+  it("rejects negative revenue values", () => {
+    const state = createInitialState();
+    state.budget.revenueBreakdown.taxes = -1;
+
+    expect(() => advanceMonth(state)).toThrow(
+      "Orçamento inválido: impostos deve ser um número finito não negativo.",
+    );
+  });
+
+  it("rejects non-finite expense values", () => {
+    const state = createInitialState();
+    state.budget.expenseBreakdown.payroll = Number.NaN;
+
+    expect(() => advanceMonth(state)).toThrow(
+      "Orçamento inválido: folha de pagamento deve ser um número finito não negativo.",
+    );
   });
 });
