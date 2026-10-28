@@ -187,4 +187,63 @@ describe("SimulationService", () => {
 
     expect(prisma.simulationSave.create).not.toHaveBeenCalled();
     });
+    
+  it("não salva o estado quando o caixa é insuficiente", async () => {
+    const initialState = {
+      ...createInitialState(),
+      budget: {
+        ...createInitialState().budget,
+        cash: 20_000,
+      },
+    };
+
+    prisma.simulationSave.findFirst.mockResolvedValue({
+      id: "save-test-id",
+      cityId: "city-test-id",
+      state: initialState,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.performAction("expand-health-clinic");
+
+    expect(result.success).toBe(false);
+
+    if (result.success) {
+      throw new Error("Era esperada uma falha na ação.");
+    }
+
+    expect(result.failureReason).toBe("INSUFFICIENT_FUNDS");
+    expect(result.state).toEqual(initialState);
+    expect(prisma.simulationSave.update).not.toHaveBeenCalled();
+    expect(prisma.simulationSave.create).not.toHaveBeenCalled();
+  });
+  
+  it("não salva o estado quando faltam Pontos de Ação", async () => {
+    const initialState = {
+      ...createInitialState(),
+      actionPoints: 0,
+    };
+
+    prisma.simulationSave.findFirst.mockResolvedValue({
+      id: "save-test-id",
+      cityId: "city-test-id",
+      state: initialState,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const result = await service.performAction("expand-health-clinic");
+
+    expect(result.success).toBe(false);
+
+    if (result.success) {
+      throw new Error("Era esperada uma falha na ação.");
+    }
+
+    expect(result.failureReason).toBe("INSUFFICIENT_ACTION_POINTS");
+    expect(result.state).toEqual(initialState);
+    expect(prisma.simulationSave.update).not.toHaveBeenCalled();
+    expect(prisma.simulationSave.create).not.toHaveBeenCalled();
+  });
 });
