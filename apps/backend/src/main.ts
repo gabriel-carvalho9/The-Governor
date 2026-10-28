@@ -1,4 +1,8 @@
-﻿import "reflect-metadata";
+﻿import dotenv from "dotenv";
+import path from "node:path";
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 
@@ -10,7 +14,9 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 
-  console.log("The Governor API disponível em http://localhost:3000/api");
+  console.log(
+    "The Governor API disponível em http://localhost:3000/api",
+  );
 }
 
 bootstrap();
