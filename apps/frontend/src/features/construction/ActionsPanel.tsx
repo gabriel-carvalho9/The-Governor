@@ -70,6 +70,19 @@ export default function ActionsPanel({
               <p className="action-cost">
                 Custo: {formatMoney(action.financialCost)}
               </p>
+              {insufficientFunds && (
+                <p className="action-warning" role="status">
+                    Saldo insuficiente. Disponível: {formatMoney(state.budget.cash)}.
+                    Faltam {formatMoney(action.financialCost - state.budget.cash)}.
+                </p>
+                )}
+
+                {insufficientPoints && (
+                <p className="action-warning" role="status">
+                    Pontos de Ação insuficientes.
+                    Necessários: {action.actionPointCost}. Disponíveis: {state.actionPoints}.
+                </p>
+                )}
 
               <ul className="action-effects">
                 {Object.entries(action.effects).map(([key, value]) => (

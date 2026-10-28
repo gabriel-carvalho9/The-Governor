@@ -229,6 +229,18 @@ progress::-moz-progress-bar {
   color: var(--color-accent);
 }
 
+.action-warning {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid #72583b;
+  border-radius: 10px;
+  background: #30291f;
+  color: #ffd49a;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 760px) {
   .app {
     gap: 20px;
