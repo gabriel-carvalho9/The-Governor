@@ -1,1 +1,1 @@
-{"root":["./src/main.tsx","./src/app/app.tsx","./src/app/router.tsx","./src/lib/api-client.ts","./src/lib/formatters.ts"],"version":"6.0.3"}
+{"root":["./src/main.tsx","./src/app/app.tsx","./src/app/router.tsx","./src/features/construction/actionspanel.tsx","./src/lib/api-client.ts","./src/lib/formatters.ts"],"version":"6.0.3"}
