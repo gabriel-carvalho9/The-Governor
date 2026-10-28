@@ -147,8 +147,13 @@ describe("SimulationService", () => {
     expect(result.state.year).toBe(1);
 
     expect(prisma.simulationSave.update).toHaveBeenCalledWith({
-        where: { id: "save-test-id" },
-        data: { state: result.state },
+      where: { id: "save-test-id" },
+      data: {
+        state: {
+          state: result.state,
+          lastReport: result.report,
+        },
+      },
     });
 
     expect(prisma.simulationSave.create).not.toHaveBeenCalled();
@@ -181,8 +186,13 @@ describe("SimulationService", () => {
     );
 
     expect(prisma.simulationSave.update).toHaveBeenCalledWith({
-        where: { id: "save-test-id" },
-        data: { state: result.state },
+      where: { id: "save-test-id" },
+      data: {
+        state: {
+          state: result.state,
+          lastReport: null,
+        },
+      },
     });
 
     expect(prisma.simulationSave.create).not.toHaveBeenCalled();
@@ -245,5 +255,51 @@ describe("SimulationService", () => {
     expect(result.state).toEqual(initialState);
     expect(prisma.simulationSave.update).not.toHaveBeenCalled();
     expect(prisma.simulationSave.create).not.toHaveBeenCalled();
+  });
+
+  it("preserva o último relatório ao executar uma ação válida", async () => {
+    const initialState = createInitialState();
+
+    const previousReport = {
+      month: 1,
+      year: 1,
+      summary: ["Expansão econômica na cidade."],
+      event: {
+        id: "ECONOMIC_BOOM" as const,
+        title: "Expansão econômica",
+        description:
+          "Novas oportunidades de trabalho movimentam a economia local.",
+      },
+      budgetBefore: initialState.budget,
+      budgetAfter: initialState.budget,
+      indicatorChanges: {},
+    };
+
+    prisma.simulationSave.findFirst.mockResolvedValue({
+      id: "save-test-id",
+      cityId: "city-test-id",
+      state: {
+        state: initialState,
+        lastReport: previousReport,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    prisma.simulationSave.update.mockResolvedValue({});
+
+    const result = await service.performAction("expand-health-clinic");
+
+    expect(result.success).toBe(true);
+
+    expect(prisma.simulationSave.update).toHaveBeenCalledWith({
+      where: { id: "save-test-id" },
+      data: {
+        state: {
+          state: result.state,
+          lastReport: previousReport,
+        },
+      },
+    });
   });
 });

@@ -1,6 +1,6 @@
 ﻿
 import { useCallback, useEffect, useState } from "react";
-import type { SimulationState } from "@the-governor/shared";
+import type { SimulationState, TurnReport } from "@the-governor/shared";
 import { advanceMonth, getSimulation } from "../lib/api-client";
 import ActionsPanel from "../features/construction/ActionsPanel";
 
@@ -30,14 +30,17 @@ function App() {
   const [advancing, setAdvancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [turnReport, setTurnReport] = useState<TurnReport | null>(null);
 
   const loadSimulation = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const simulation = await getSimulation();
-      setState(simulation);
+      const result = await getSimulation();
+
+      setState(result.state);
+      setTurnReport(result.report);
     } catch {
       setError(
         "Não foi possível carregar a cidade. Verifique se o backend está funcionando.",
@@ -59,6 +62,7 @@ function App() {
     try {
       const result = await advanceMonth();
       setState(result.state);
+      setTurnReport(result.report);
       setNotice(
         `Mês ${result.report.month} concluído. A simulação foi salva.`,
       );
@@ -170,6 +174,35 @@ function App() {
         
         {notice && <p role="status">{notice}</p>}
         {error && <p role="alert">{error}</p>}
+        
+        {turnReport?.event && (
+          <section
+            className={`city-event ${
+              turnReport.event.id === "ECONOMIC_BOOM"
+                ? "city-event--positive"
+                : "city-event--negative"
+            }`}
+            aria-live="polite"
+            aria-label="Evento do mês"
+          >
+            <p className="eyebrow">ACONTECEU NA CIDADE</p>
+            <h2>{turnReport.event.title}</h2>
+            <p>{turnReport.event.description}</p>
+
+            <ul>
+              {turnReport.summary
+                .filter(
+                  (line) =>
+                    line.startsWith("Impacto financeiro do evento:") ||
+                    line.startsWith("Impacto do evento em "),
+                )
+                .map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+            </ul>
+          </section>
+        )}
+
       </section>
 
       <ActionsPanel

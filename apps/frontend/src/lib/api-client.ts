@@ -1,9 +1,5 @@
 
-import type {
-  ActionResult,
-  SimulationState,
-  TurnResult,
-} from "@the-governor/shared";
+import type { ActionResult, SimulationState, TurnReport, TurnResult } from "@the-governor/shared";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL ?? "http://localhost:3000/api";
@@ -30,9 +26,14 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
-export async function getSimulation(): Promise<SimulationState> {
-  const result = await request<{ state: SimulationState }>("/simulation");
-  return result.state;
+export async function getSimulation(): Promise<{
+  state: SimulationState;
+  report: TurnReport | null;
+}> {
+  return request<{
+    state: SimulationState;
+    report: TurnReport | null;
+  }>("/simulation");
 }
 
 export async function advanceMonth(): Promise<TurnResult> {

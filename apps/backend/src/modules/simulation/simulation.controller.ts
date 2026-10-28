@@ -14,12 +14,15 @@ export class SimulationController {
   ) {}
 
   @Get()
-  async getSimulation() {
-    const state =
-      await this.simulationService.loadOrCreateInitialState();
+    async getSimulation() {
+      const { state, lastReport } =
+        await this.simulationService.loadSimulationData();
 
-    return { state };
-  }
+      return {
+        state,
+        report: lastReport,
+      };
+    }
 
   @Post("advance")
   async advanceMonth() {

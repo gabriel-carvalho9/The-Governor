@@ -269,3 +269,61 @@ progress::-moz-progress-bar {
     grid-template-columns: 1fr;
   }
 }
+
+
+.city-event {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.city-event--positive {
+  border-color: #86c9a0;
+  background: #f0faf3;
+  color: #174b2b;
+}
+
+.city-event--negative {
+  border-color: #e5a09a;
+  background: #fff4f2;
+  color: #70251f;
+}
+
+.city-event .eyebrow {
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.city-event h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.4rem;
+}
+
+.city-event p {
+  line-height: 1.6;
+}
+
+.city-event ul {
+  display: grid;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.city-event li {
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .city-event {
+    padding: 1rem;
+  }
+
+  .city-event h2 {
+    font-size: 1.2rem;
+  }
+}
