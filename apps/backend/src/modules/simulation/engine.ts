@@ -1,10 +1,12 @@
-
 import type {
   Budget,
+  CityEvent,
   IndicatorName,
   SimulationState,
   TurnResult,
 } from "@the-governor/shared";
+
+import { getRandomCityEvent } from "./city-events";
 
 function cloneBudget(budget: Budget): Budget {
   return {
@@ -132,41 +134,81 @@ export function advanceMonth(state: SimulationState): TurnResult {
 
   budgetAfter.cash += budgetAfter.monthlyBalance;
 
+  const cityEventOutcome = getRandomCityEvent();
+  const event: CityEvent | undefined = cityEventOutcome?.event;
+
+  if (cityEventOutcome) {
+    budgetAfter.cash += cityEventOutcome.budgetChange;
+  }
+
   const indicatorChanges = calculateSpendingEffects(budgetAfter);
 
-  const approvalBefore = state.indicators.approval;
-  const approvalPenalty = budgetAfter.cash < 0 ? 2 : 0;
-  const approvalAfter = clampIndicator(approvalBefore - approvalPenalty);
-  const approvalChange = approvalAfter - approvalBefore;
-
-  if (approvalChange !== 0) {
-    indicatorChanges.approval = approvalChange;
-  }
-
-  const nextIndicators = {
-    health: clampIndicator(
-      state.indicators.health + (indicatorChanges.health ?? 0),
-    ),
-    education: clampIndicator(
-      state.indicators.education + (indicatorChanges.education ?? 0),
-    ),
-    housing: state.indicators.housing,
-    environment: clampIndicator(
-      state.indicators.environment + (indicatorChanges.environment ?? 0),
-    ),
-    approval: approvalAfter,
-    employment: state.indicators.employment,
-  };
-
-  for (const key of ["health", "education", "environment"] as const) {
-    const actualChange = nextIndicators[key] - state.indicators[key];
-
-    if (actualChange === 0) {
-      delete indicatorChanges[key];
-    } else {
-      indicatorChanges[key] = actualChange;
+  if (cityEventOutcome) {
+    for (const [key, change] of Object.entries(
+      cityEventOutcome.indicatorChanges,
+    ) as [IndicatorName, number][]) {
+      indicatorChanges[key] = (indicatorChanges[key] ?? 0) + change;
     }
   }
+ 
+const approvalBefore = state.indicators.approval;
+const approvalPenalty = budgetAfter.cash < 0 ? 2 : 0;
+
+if (approvalPenalty > 0) {
+  indicatorChanges.approval =
+    (indicatorChanges.approval ?? 0) - approvalPenalty;
+}
+
+const approvalAfter = clampIndicator(
+  approvalBefore + (indicatorChanges.approval ?? 0),
+);
+const approvalChange = approvalAfter - approvalBefore;
+
+if (approvalChange !== 0) {
+  indicatorChanges.approval = approvalChange;
+} else {
+  delete indicatorChanges.approval;
+}
+
+
+  const nextIndicators = {
+  health: clampIndicator(
+    state.indicators.health + (indicatorChanges.health ?? 0),
+  ),
+  education: clampIndicator(
+    state.indicators.education + (indicatorChanges.education ?? 0),
+  ),
+  housing: clampIndicator(
+    state.indicators.housing + (indicatorChanges.housing ?? 0),
+  ),
+  environment: clampIndicator(
+    state.indicators.environment + (indicatorChanges.environment ?? 0),
+  ),
+  approval: clampIndicator(
+    state.indicators.approval + (indicatorChanges.approval ?? 0),
+  ),
+  employment: clampIndicator(
+    state.indicators.employment + (indicatorChanges.employment ?? 0),
+  ),
+};
+
+  for (const key of [
+  "health",
+  "education",
+  "housing",
+  "environment",
+  "approval",
+  "employment",
+] as const) {
+  const actualChange =
+    nextIndicators[key] - state.indicators[key];
+
+  if (actualChange === 0) {
+    delete indicatorChanges[key];
+  } else {
+    indicatorChanges[key] = actualChange;
+  }
+}
 
   const nextMonth = state.month === 12 ? 1 : state.month + 1;
   const nextYear = state.month === 12 ? state.year + 1 : state.year;
@@ -186,6 +228,38 @@ export function advanceMonth(state: SimulationState): TurnResult {
     `Resultado do mês: G$ ${budgetAfter.monthlyBalance.toLocaleString("pt-BR")}.`,
     `Caixa municipal: G$ ${budgetAfter.cash.toLocaleString("pt-BR")}.`,
   ];
+  
+  if (cityEventOutcome) {
+  summary.push(
+    `Evento da cidade: ${cityEventOutcome.event.title}.`,
+    cityEventOutcome.event.description,
+  );
+
+  if (cityEventOutcome.budgetChange !== 0) {
+    const signal = cityEventOutcome.budgetChange > 0 ? "+" : "";
+    summary.push(
+      `Impacto financeiro do evento: ${signal}G$ ${cityEventOutcome.budgetChange.toLocaleString("pt-BR")}.`,
+    );
+  }
+
+  for (const [indicator, change] of Object.entries(
+    cityEventOutcome.indicatorChanges,
+  ) as [IndicatorName, number][]) {
+    const label: Record<IndicatorName, string> = {
+      health: "Saúde",
+      education: "Educação",
+      housing: "Habitação",
+      environment: "Meio ambiente",
+      approval: "Aprovação",
+      employment: "Emprego",
+    };
+
+    const signal = change > 0 ? "+" : "";
+    summary.push(
+      `Impacto do evento em ${label[indicator]}: ${signal}${change} ponto(s).`,
+    );
+  }
+}
 
   if (budgetAfter.cash < 0) {
     if (approvalChange < 0) {
@@ -205,6 +279,7 @@ export function advanceMonth(state: SimulationState): TurnResult {
       month: state.month,
       year: state.year,
       summary,
+      ...(event ? { event } : {}),
       budgetBefore,
       budgetAfter: cloneBudget(budgetAfter),
       indicatorChanges,

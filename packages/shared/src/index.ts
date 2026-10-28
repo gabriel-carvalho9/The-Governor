@@ -1,6 +1,8 @@
 export type { Budget } from "./types/budget";
 
 export type {
+  CityEvent,
+  CityEventType,
   CityIndicators,
   IndicatorName,
   SimulationState,

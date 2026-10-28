@@ -1,6 +1,15 @@
 /// <reference types="jest" />
 import { advanceMonth, createInitialState } from "./engine";
 import type { Budget } from "@the-governor/shared";
+import * as cityEvents from "./city-events";
+
+beforeEach(() => {
+  jest.spyOn(cityEvents, "getRandomCityEvent").mockReturnValue(null);
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 describe("Simulation engine", () => {
   it("creates Vale Sereno with the initial budget", () => {
@@ -185,5 +194,53 @@ describe("Simulation engine", () => {
     expect(result.state.indicators.education).toBe(0);
     expect(result.report.indicatorChanges.health).toBeUndefined();
     expect(result.report.indicatorChanges.education).toBeUndefined();
+  });
+  
+  it("applies the economic boom event to the budget and indicators", () => {
+    jest.spyOn(cityEvents, "getRandomCityEvent").mockReturnValue({
+      event: {
+        id: "ECONOMIC_BOOM",
+        title: "Expansão econômica",
+        description:
+          "Novas oportunidades de trabalho movimentam a economia local.",
+      },
+      budgetChange: 75_000,
+      indicatorChanges: { employment: 3, approval: 2 },
+    });
+
+    const state = createInitialState();
+    const result = advanceMonth(state);
+
+    expect(result.report.event?.id).toBe("ECONOMIC_BOOM");
+    expect(result.state.budget.cash).toBe(2_655_000);
+    expect(result.state.indicators.employment).toBe(95);
+    expect(result.state.indicators.approval).toBe(64);
+    expect(result.report.indicatorChanges.employment).toBe(3);
+    expect(result.report.indicatorChanges.approval).toBe(2);
+  });
+
+  it("combines a health crisis with the financial approval penalty", () => {
+    jest.spyOn(cityEvents, "getRandomCityEvent").mockReturnValue({
+      event: {
+        id: "HEALTH_CRISIS",
+        title: "Surto de doença",
+        description:
+          "Um surto de doença aumenta a pressão sobre os serviços de saúde.",
+      },
+      budgetChange: -50_000,
+      indicatorChanges: { health: -5, approval: -2 },
+    });
+
+    const state = createInitialState();
+    state.budget.cash = 0;
+    state.budget.expenseBreakdown.publicServices = 700_000;
+
+    const result = advanceMonth(state);
+
+    expect(result.report.event?.id).toBe("HEALTH_CRISIS");
+    expect(result.state.budget.cash).toBe(-410_000);
+    expect(result.state.indicators.health).toBe(70);
+    expect(result.state.indicators.approval).toBe(58);
+    expect(result.report.indicatorChanges.approval).toBe(-4);
   });
 });
